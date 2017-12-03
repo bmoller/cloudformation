@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create a VPC with an optional gateway attached
+Parameters:
+  CidrBlock:
+    AllowedPattern: '^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.{3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(1[6-9]|2[0-8])$'
+    Description: Enter a CIDR block for the VPC IP address range
+    Type: String
+  CreateInternetGateway:
+    AllowedValues:
+      - yes
+      - no
+    Description: Select whether the new VPC should have an internet gateway
+    Type: String
+  DNSType:
+    AllowedValues:
+      - none
+      - enabled
+      - hostnames
+    Default: enabled
+    Description: Select an option for DNS functionality in the VPC
+    Type: String
+  VPCName:
+    Description: Enter a name for the new VPC
+    Type: String
+Conditions:
+  CreateInternetGateway: !Equals [ !Ref CreateInternetGateway, yes ]
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref CidrBlock
+      EnableDnsHostnames: !Equals [ !Ref DNSType, hostnames ]
+      EnableDnsSupport: !Or [ !Equals [ !Ref DNSType, enabled ], !Equals [ !Ref DNSType, hostnames ] ]
+      Tags:
+      - Key: Name
+        Value: !Ref VPCName
+  Gateway:
+    Condition: CreateInternetGateway
+    Type: AWS::EC2::InternetGateway
+  RouteTable:
+    Condition: CreateInternetGateway
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VPC
+  PublicRoute:
+    Condition: CreateInternetGateway
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref Gateway
+      RouteTableId: !Ref RouteTable
+Outputs:
+  PublicRouteTable:
+    Description: ID of the public route table
+    Value: !Ref RouteTable
+  VpcId:
+    Description: ID of the new VPC
+    Value: !Ref VPC

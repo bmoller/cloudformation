@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Creates a VPC in the eu-west-1 region with an internet gateway and NAT
+  gateways in each availability zone
+Parameters:
+  CidrBlock:
+    AllowedPattern: '^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.{3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(1[6-9]|2[0-8])$'
+    Description: Enter a CIDR block for the VPC IP address range
+    Type: String
+  DNSType:
+    AllowedValues:
+      - none
+      - enabled
+      - hostnames
+    Default: enabled
+    Description: Select an option for DNS functionality in the VPC
+    Type: String
+  NATGatewayTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base NAT gateway template, without leading slash
+    Type: String
+  SubnetTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base subnet template, without leading slash
+    Type: String
+  TemplatesBucket:
+    AllowedPattern: '^[\p{Ll}\d][-_\.\pL\d]+$'
+    Description: Enter the name of the S3 bucket where templates are stored
+    MaxLength: 63
+    MinLength: 3
+    Type: String
+  VPCName:
+    Description: Enter a name for the new VPC
+    Type: String
+  VPCTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base VPC template, without leading slash
+    Type: String
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CidrBlock: !Ref CidrBlock
+        CreateInternetGateway: yes
+        VPCName: !Ref VPCName
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${VPCTemplatePath}
+  PublicSubnet251a:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CidrBlock: 

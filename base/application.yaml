@@ -1,0 +1,89 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates an AutoScaling group from provided information
+Parameters:
+  ApplicationName:
+    Description: Enter the name of the application
+    Type: String
+  AppSubnets:
+    Description: Select the subnets to add to the application AS group
+    Type: List<AWS::EC2::Subnet::Id>
+  ELBSubnets:
+    Description: Select the subnets to add to the application AS group
+    Type: List<AWS::EC2::Subnet::Id>
+  ExternalApplication:
+    AllowedValues:
+      - no
+      - yes
+    Description: Select whether the application is internet-facing
+    Type: String
+  GroupSize:
+    Description: Enter the desired initial number of instances
+    Type: Number
+  HealthCheckPath:
+  IamInstanceProfile:
+    AllowedPattern: '^arn:aws:iam::\d+:instance-profile/[-_\pL\d]+$'
+    Default: 'arn:aws:iam::0:instance-profile/null'
+    Description: Enter an IAM instance profile ARN to launch instances with
+    Type: String
+  ImageId:
+    Description: Enter an AMI ID to launch instances from
+    Type: AWS::EC2::Image::Id
+  InstanceType:
+    AllowedPattern: '^\p{Ll}+\d+\.\d*\p{Ll}+$'
+    Description: Enter an EC2 instance type to launch instances from
+    Type: String
+  UserData:
+    Description: Enter any desired user data for instances to launch with
+    Type: String
+  VpcId:
+    Description: Select the VPC to launch the application in
+    Type: AWS::EC2::VPC::Id
+Conditions:
+  ExternalApplication: !Equals [ !Ref ExternalApplication, yes ]
+  InstanceProfileSpecified: !Not [ !Equals [ !Ref IamInstanceProfile, 'arn:aws:iam::0:instance-profile/null' ] ]
+Resources:
+  ELBSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub Load balancers for the ${ApplicationName} application
+      VpcId: !Ref VpcId
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Scheme: !If [ ExternalApplication, internet-facing, internal ]
+      SecurityGroups:
+        - !Ref ELBSecurityGroup
+      Subnets: !Ref ELBSubnets
+      Type: application
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub Instances running the ${ApplicationName} application
+      SecurityGroupIngress:
+      - Description: Allow HTTP connections from the application ELB
+        FromPort: 80
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref ELBSecurityGroup
+        ToPort: 80
+      VpcId: !Ref VpcId
+  LaunchConfiguration:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      AssociatePublicIpAddress: false
+      ImageId: !Ref ImageId
+      IamInstanceProfile: !If [ InstanceProfileSpecified, !Ref IamInstanceProfile, !Ref 'AWS::NoValue' ]
+      ImageId: !Ref ImageId
+      InstanceType: !Ref InstanceType
+      SecurityGroups:
+        - !Ref SecurityGroup
+      UserData: !Base64 [ !Ref UserData ]
+  AutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      HealthCheckType: ELB
+      LaunchConfigurationName: !Ref LaunchConfiguration
+      MaxSize: !Ref GroupSize
+      MinSize: !Ref GroupSize
+      TargetGroupARNs:
+        - !Ref ELBTargetGroup
+      VPCZoneIdentifier: !Ref Subnets

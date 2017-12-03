@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Creates a NAT gateway and a route table pointing to it for internet access
+Parameters:
+  SubnetId:
+    AllowedPattern: '^subnet-[a-f\d]+$'
+    Description: Enter the ID of the public subnet to create the gateway in
+    Type: String
+  VpcId:
+    AllowedPattern: '^vpc-[a-f\d]+$'
+    Description: Enter the ID of the VPC to create the gateway in
+    Type: String
+Resources:
+  GatewayIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  Gateway:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt GatewayIP.AllocationId
+      SubnetId: !Ref SubnetId
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcId
+  NATRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref Gateway
+      RouteTableId: !Ref RouteTable
+Outputs:
+  PublicIp:
+    Description: Public IP address of the new NAT gateway
+    Value: !Ref GatewayIP
+  RouteTable:
+    Description: ID of the route table pointing to the new NAT gateway
+    Value: !Ref RouteTable
