@@ -1,0 +1,47 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Creates a single subnet, optionally with a specified route table
+Parameters:
+  AvailabilityZone:
+    AllowedPattern: '^(ap|ca|eu|sa|us)-(central|(north)?east|south(east)?|west)-[1-2][a-f]$'
+    Description: Enter an AWS availability zone
+    Type: String
+  CidrBlock:
+    AllowedPattern: '^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.{3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(1[6-9]|2[0-8])$'
+    Description: Enter a CIDR block for the subnet IP address range
+    Type: String
+  PublicSubnet:
+    AllowedValues:
+      - no
+      - yes
+    Description: Select whether the subnet is public
+    Type: String
+  RouteTableId:
+    AllowedPattern: '^rtb-[a-f\d]+$'
+    Default: rtb-000000
+    Description: Enter a route table ID for the new subnet to use (optional)
+    Type: String
+  VpcId:
+    AllowedPattern: '^vpc-[a-f\d]+$'
+    Description: Enter the ID of the VPC to create the subnet in
+    Type: String
+Conditions:
+  PublicSubnet: !Equals [ !Ref PublicSubnet, yes ]
+  RouteTableSpecified: !Not [ !Equals [ !Ref RouteTableId, rtb-000000 ] ]
+Resources:
+  Subnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      CidrBlock: !Ref CidrBlock
+      MapPublicIpOnLaunch: !If [ PublicSubnet, true, false ]
+      VpcId: !Ref VpcId
+  SubnetRoute:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Condition: RouteTableSpecified
+    Properties:
+      RouteTableId: !Ref RouteTableId
+      SubnetId: !Ref Subnet
+Outputs:
+  SubnetId:
+    Description: ID of the newly-created subnet
+    Value: !Ref Subnet
