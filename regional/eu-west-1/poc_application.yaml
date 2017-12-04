@@ -2,6 +2,20 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: |
   Launches the Solutions Architect POC application in the eu-west-1 region
 Parameters:
+  AutoScalingGroupSize:
+    Description: Enter the desired initial number of instances in the application autoscaling group
+    Type: Number
+  AutoScalingImageId:
+    Description: Enter the AMI to launch application instances with
+    Type: AWS::EC2::Image::Id
+  AutoScalingInstanceType:
+    AllowedPattern: '^\p{Ll}+\d+\.\d*\p{Ll}+$'
+    Description: Enter the EC2 instance class to launch instances with
+    Type: String
+  HTTPAutoScalingApplicationTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base HTTP autoscaling application template, without leading slash
+    Type: String
   NATGatewayTemplatePath:
     AllowedPattern: '^[^\/].+$'
     Description: Enter the path to the base NAT gateway template, without leading slash
@@ -30,6 +44,7 @@ Metadata:
         default: CloudFormation Templates
       Parameters:
         - TemplatesBucket
+        - HTTPAutoScalingApplicationTemplatePath
         - NATGatewayTemplatePath
         - SubnetTemplatePath
         - VPCTemplatePath
@@ -37,7 +52,21 @@ Metadata:
         default: VPC Parameters
       Parameters:
         - VPCName
+    - Label:
+        default: AutoScaling Parameters
+      Parameters:
+        - AutoScalingGroupSize
+        - AutoScalingImageId
+        - AutoScalingInstanceType
     ParameterLabels:
+      AutoScalingGroupSize:
+        default: Initial Group Size
+      AutoScalingImageId:
+        default: AMI ID
+      AutoScalingInstanceType:
+        default: Instance Type
+      HTTPAutoScalingApplicationTemplatePath:
+        default: HTTP AutoScaling Application Template
       NATGatewayTemplatePath:
         default: NAT Gateway Template
       SubnetTemplatePath:
@@ -138,3 +167,40 @@ Resources:
         RouteTableId: !GetAtt NATGatewayC.Outputs.RouteTableId
         VpcId: !GetAtt VPCStack.Outputs.VpcId
       TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  POCApplication:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        ApplicationName: !Ref AWS::StackName
+        AppSubnets:
+          - !GetAtt ApplicationSubnet101a.Outputs.SubnetId
+          - !GetAtt ApplicationSubnet102b.Outputs.SubnetId
+          - !GetAtt ApplicationSubnet103c.Outputs.SubnetId
+        ELBSubnets:
+          - !GetAtt PublicSubnet251a.Outputs.SubnetId
+          - !GetAtt PublicSubnet252b.Outputs.SubnetId
+          - !GetAtt PublicSubnet253c.Outputs.SubnetId
+        ExternalApplication: yes
+        GroupSize: !Ref AutoScalingGroupSize
+        HealthCheckPath: /demo.html
+        HealthCheckPort: 80
+        ImageId: !Ref AutoScalingImageId
+        InstanceType: !Ref AutoScalingInstanceType
+        TrafficPort: 80
+        UserData:
+          !Base64 |
+            #!/bin/bash
+
+            yum update -y
+            yum install -y httpd24
+            service httpd start
+            chkconfig httpd on
+            groupadd www
+            usermod -a -G www ec2-user
+            chown -R root:www /var/www
+            chmod 2775 /var/www
+            find /var/www -type d -exec chmod 2775 {} +
+            find /var/www -type f -exec chmod 0664 {} +
+            echo '<html><head><title>Success!</title></head><body><iframe width="560" height="315" src="https://www.youtube.com/embed/Js21xKMFdww" frameborder="0" allowfullscreen></iframe></body></html>' > /var/www/html/demo.html
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${HTTPAutoScalingApplicationTemplatePath}
