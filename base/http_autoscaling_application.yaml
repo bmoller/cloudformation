@@ -6,10 +6,10 @@ Parameters:
     Type: String
   AppSubnets:
     Description: Select the subnets to add to the application AS group
-    Type: List<AWS::EC2::Subnet::Id>
+    Type: CommaDelimitedList
   ELBSubnets:
     Description: Select the subnets to add to the application AS group
-    Type: List<AWS::EC2::Subnet::Id>
+    Type: CommaDelimitedList
   ExternalApplication:
     AllowedValues:
       - no
