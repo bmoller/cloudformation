@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: |
+  Launches the Solutions Architect POC application in the eu-west-1 region
+Parameters:
+  NATGatewayTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base NAT gateway template, without leading slash
+    Type: String
+  SubnetTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base subnet template, without leading slash
+    Type: String
+  TemplatesBucket:
+    AllowedPattern: '^[\p{Ll}\d][-_\.\pL\d]+$'
+    Description: Enter the name of the S3 bucket where templates are stored
+    MaxLength: 63
+    MinLength: 3
+    Type: String
+  VPCName:
+    Description: Enter a name for the new VPC
+    Type: String
+  VPCTemplatePath:
+    AllowedPattern: '^[^\/].+$'
+    Description: Enter the path to the base VPC template, without leading slash
+    Type: String
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: CloudFormation Templates
+      Parameters:
+        - TemplatesBucket
+        - NATGatewayTemplatePath
+        - SubnetTemplatePath
+        - VPCTemplatePath
+    - Label:
+        default: VPC Parameters
+      Parameters:
+        - VPCName
+    ParameterLabels:
+      NATGatewayTemplatePath:
+        default: NAT Gateway Template
+      SubnetTemplatePath:
+        default: Subnet Template
+      TemplatesBucket:
+        default: S3 Bucket
+      VPCName:
+        default: VPC Name
+      VPCTemplatePath:
+        default: VPC Template
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        CidrBlock: 10.0.0.0/16
+        CreateInternetGateway: yes
+        VPCName: !Ref VPCName
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${VPCTemplatePath}
+  PublicSubnet251a:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1a
+        CidrBlock: 10.0.251.0/24
+        PublicSubnet: yes
+        RouteTableId: !GetAtt VPCStack.Outputs.PublicRouteTable
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  PublicSubnet252b:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1b
+        CidrBlock: 10.0.252.0/24
+        PublicSubnet: yes
+        RouteTableId: !GetAtt VPCStack.Outputs.PublicRouteTable
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  PublicSubnet253c:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1c
+        CidrBlock: 10.0.253.0/24
+        PublicSubnet: yes
+        RouteTableId: !GetAtt VPCStack.Outputs.PublicRouteTable
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  NATGatewayA:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SubnetId: !GetAtt PublicSubnet251a.Outputs.SubnetId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${NATGatewayTemplatePath}
+  NATGatewayB:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SubnetId: !GetAtt PublicSubnet252b.Outputs.SubnetId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${NATGatewayTemplatePath}
+  NATGatewayC:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        SubnetId: !GetAtt PublicSubnet253c.Outputs.SubnetId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${NATGatewayTemplatePath}
+  ApplicationSubnet101a:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1a
+        CidrBlock: 10.0.101.0/24
+        PublicSubnet: no
+        RouteTableId: !GetAtt NATGatewayA.Outputs.RouteTableId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  ApplicationSubnet102b:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1b
+        CidrBlock: 10.0.102.0/24
+        PublicSubnet: no
+        RouteTableId: !GetAtt NATGatewayB.Outputs.RouteTableId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
+  ApplicationSubnet103c:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        AvailabilityZone: eu-west-1c
+        CidrBlock: 10.0.103.0/24
+        PublicSubnet: no
+        RouteTableId: !GetAtt NATGatewayC.Outputs.RouteTableId
+        VpcId: !GetAtt VPCStack.Outputs.VpcId
+      TemplateURL: !Sub https://s3.amazonaws.com/${TemplatesBucket}/${SubnetTemplatePath}
