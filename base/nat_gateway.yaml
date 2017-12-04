@@ -1,15 +1,13 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: |
-  Creates a NAT gateway and a route table pointing to it for internet access
+  A NAT gateway and a route table with the gateway as the default route
 Parameters:
   SubnetId:
-    AllowedPattern: '^subnet-[a-f\d]+$'
-    Description: Enter the ID of the public subnet to create the gateway in
-    Type: String
+    Description: Select a public subnet to create the gateway in
+    Type: AWS::EC2::Subnet::Id
   VpcId:
-    AllowedPattern: '^vpc-[a-f\d]+$'
-    Description: Enter the ID of the VPC to create the gateway in
-    Type: String
+    Description: Select the VPC to create the gateway in
+    Type: AWS::EC2::VPC::Id
 Resources:
   GatewayIP:
     Type: AWS::EC2::EIP
@@ -24,7 +22,7 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VpcId
-  NATRoute:
+  Route:
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0
