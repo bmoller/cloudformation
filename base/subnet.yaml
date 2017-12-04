@@ -1,8 +1,8 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Creates a single subnet, optionally with a specified route table
+Description: A single subnet, optionally with a specified route table
 Parameters:
   AvailabilityZone:
-    Description: Enter an AWS availability zone
+    Description: Select an AWS availability zone
     Type: AWS::EC2::AvailabilityZone::Name
   CidrBlock:
     AllowedPattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(?:1[6-9]|2[0-8])$'
@@ -20,9 +20,8 @@ Parameters:
     Description: Enter a route table ID for the new subnet to use (optional)
     Type: String
   VpcId:
-    AllowedPattern: '^vpc-[a-f\d]+$'
-    Description: Enter the ID of the VPC to create the subnet in
-    Type: String
+    Description: Select the VPC to create the subnet in
+    Type: AWS::EC2::VPC::Id
 Conditions:
   MapPublicIpOnLaunch: !Equals [ !Ref PublicSubnet, yes ]
   RouteTableSpecified: !Not [ !Equals [ !Ref RouteTableId, rtb-000000 ] ]
