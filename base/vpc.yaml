@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Create a VPC with an optional gateway attached
 Parameters:
   CidrBlock:
-    AllowedPattern: '^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.{3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(1[6-9]|2[0-8])$'
+    AllowedPattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(?:1[6-9]|2[0-8])$'
     Description: Enter a CIDR block for the VPC IP address range
     Type: String
   CreateInternetGateway:
@@ -24,19 +24,27 @@ Parameters:
     Type: String
 Conditions:
   CreateInternetGateway: !Equals [ !Ref CreateInternetGateway, yes ]
+  EnableDnsHostnames: !Equals [ !Ref DNSType, hostnames ]
+  EnableDnsSupport: !Or [ !Equals [ !Ref DNSType, enabled ], !Equals [ !Ref DNSType, hostnames ] ]
 Resources:
   VPC:
     Type: AWS::EC2::VPC
     Properties:
       CidrBlock: !Ref CidrBlock
-      EnableDnsHostnames: !Equals [ !Ref DNSType, hostnames ]
-      EnableDnsSupport: !Or [ !Equals [ !Ref DNSType, enabled ], !Equals [ !Ref DNSType, hostnames ] ]
+      EnableDnsHostnames: !If [ EnableDnsHostnames, true, false ]
+      EnableDnsSupport: !If [ EnableDnsSupport, true, false ]
       Tags:
       - Key: Name
         Value: !Ref VPCName
   Gateway:
     Condition: CreateInternetGateway
     Type: AWS::EC2::InternetGateway
+  GatewayAttachment:
+    Condition: CreateInternetGateway
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref Gateway
+      VpcId: !Ref VPC
   RouteTable:
     Condition: CreateInternetGateway
     Type: AWS::EC2::RouteTable
@@ -44,6 +52,7 @@ Resources:
       VpcId: !Ref VPC
   PublicRoute:
     Condition: CreateInternetGateway
+    DependsOn: GatewayAttachment
     Type: AWS::EC2::Route
     Properties:
       DestinationCidrBlock: 0.0.0.0/0

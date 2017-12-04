@@ -20,6 +20,11 @@ Parameters:
     Description: Enter the desired initial number of instances
     Type: Number
   HealthCheckPath:
+    Description: Enter the path to use for HTTP health checks
+    Type: String
+  HealthCheckPort:
+    Description: Enter the port to connect to for HTTP health checks
+    Type: Number
   IamInstanceProfile:
     AllowedPattern: '^arn:aws:iam::\d+:instance-profile/[-_\pL\d]+$'
     Default: 'arn:aws:iam::0:instance-profile/null'
@@ -32,6 +37,9 @@ Parameters:
     AllowedPattern: '^\p{Ll}+\d+\.\d*\p{Ll}+$'
     Description: Enter an EC2 instance type to launch instances from
     Type: String
+  TrafficPort:
+    Description: Enter the port to send traffic to on the instances
+    Type: Number
   UserData:
     Description: Enter any desired user data for instances to launch with
     Type: String
@@ -55,7 +63,25 @@ Resources:
         - !Ref ELBSecurityGroup
       Subnets: !Ref ELBSubnets
       Type: application
-  SecurityGroup:
+  TargetGroup:
+    Type: AWS::LoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckPath: !Ref HealthCheckPath
+      HealthCheckPort: !Ref HealthCheckPort
+      HealthCheckProtocol: HTTP
+      Port: !Ref TrafficPort
+      Protocol: HTTP
+      VpcId: !Ref VpcId
+  ELBListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - TargetGroupArn: !Ref TargetGroup
+        Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+  AppSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Sub Instances running the ${ApplicationName} application
@@ -85,5 +111,5 @@ Resources:
       MaxSize: !Ref GroupSize
       MinSize: !Ref GroupSize
       TargetGroupARNs:
-        - !Ref ELBTargetGroup
+        - !Ref TargetGroup
       VPCZoneIdentifier: !Ref Subnets

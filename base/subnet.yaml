@@ -2,11 +2,10 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Creates a single subnet, optionally with a specified route table
 Parameters:
   AvailabilityZone:
-    AllowedPattern: '^(ap|ca|eu|sa|us)-(central|(north)?east|south(east)?|west)-[1-2][a-f]$'
     Description: Enter an AWS availability zone
-    Type: String
+    Type: AWS::EC2::AvailabilityZone::Name
   CidrBlock:
-    AllowedPattern: '^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.{3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(1[6-9]|2[0-8])$'
+    AllowedPattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(?:1[6-9]|2[0-8])$'
     Description: Enter a CIDR block for the subnet IP address range
     Type: String
   PublicSubnet:

@@ -34,6 +34,6 @@ Outputs:
   PublicIp:
     Description: Public IP address of the new NAT gateway
     Value: !Ref GatewayIP
-  RouteTable:
+  RouteTableId:
     Description: ID of the route table pointing to the new NAT gateway
     Value: !Ref RouteTable
