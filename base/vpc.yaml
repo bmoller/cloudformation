@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create a VPC with an optional gateway attached
+Description: A VPC with an optional internet gateway attached
 Parameters:
   CidrBlock:
     AllowedPattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\/(?:1[6-9]|2[0-8])$'
@@ -19,7 +19,7 @@ Parameters:
     Default: enabled
     Description: Select an option for DNS functionality in the VPC
     Type: String
-  VPCName:
+  Name:
     Description: Enter a name for the new VPC
     Type: String
 Conditions:
@@ -35,7 +35,7 @@ Resources:
       EnableDnsSupport: !If [ EnableDnsSupport, true, false ]
       Tags:
       - Key: Name
-        Value: !Ref VPCName
+        Value: !Ref Name
   Gateway:
     Condition: CreateInternetGateway
     Type: AWS::EC2::InternetGateway
@@ -50,7 +50,7 @@ Resources:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
-  PublicRoute:
+  Route:
     Condition: CreateInternetGateway
     DependsOn: GatewayAttachment
     Type: AWS::EC2::Route
@@ -59,7 +59,7 @@ Resources:
       GatewayId: !Ref Gateway
       RouteTableId: !Ref RouteTable
 Outputs:
-  PublicRouteTable:
+  RouteTableId:
     Description: ID of the public route table
     Value: !Ref RouteTable
   VpcId:
