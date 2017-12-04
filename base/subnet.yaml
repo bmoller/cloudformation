@@ -24,6 +24,7 @@ Parameters:
     Description: Enter the ID of the VPC to create the subnet in
     Type: String
 Conditions:
+  MapPublicIpOnLaunch: !Equals [ !Ref PublicSubnet, yes ]
   RouteTableSpecified: !Not [ !Equals [ !Ref RouteTableId, rtb-000000 ] ]
 Resources:
   Subnet:
@@ -31,7 +32,7 @@ Resources:
     Properties:
       AvailabilityZone: !Ref AvailabilityZone
       CidrBlock: !Ref CidrBlock
-      MapPublicIpOnLaunch: !Equals [ !Ref PublicSubnet, yes ]
+      MapPublicIpOnLaunch: !If [ MapPublicIpOnLaunch, true, false ]
       VpcId: !Ref VpcId
   SubnetRoute:
     Type: AWS::EC2::SubnetRouteTableAssociation
